@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from db.database import get_db
 from models.user import DbUser
 from models.course import DbCourse
-from models.enrollments import enrollments
-from schemas.base_schema import CourseCreate, CourseResponse
-from routers.deps import get_current_user
+from models.curr_item import DbCurrItem
+from schemas.base_schema import CourseResponse
+from routers.auth import get_current_user
+from utils.cloud_utils import upload_image_to_cloudinary
 import uuid
+import json
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -24,40 +26,86 @@ def get_courses(
     query = db.query(DbCourse)
 
     if level:
-        query = query.filter(DbCourse.level == level)
+        query = query.filter(DbCourse.level.lower() == level.lower())
     if price_min is not None:
         query = query.filter(DbCourse.pricing >= price_min)
     if price_max is not None:
         query = query.filter(DbCourse.pricing <= price_max)
     if language:
-        query = query.filter(DbCourse.primary_language == language)
+        query = query.filter(
+            DbCourse.primary_language.lower() == language.lower())
     if category:
-        query = query.filter(DbCourse.category == category)
+        query = query.filter(DbCourse.category.lower() == category.lower())
 
     return query.all()
 
 
 @router.post("", response_model=CourseResponse)
 def create_course(
-    course: CourseCreate,
-    image: UploadFile = File(None),
+    course_data: str = Form(...),  # JSON string containing course details
+    image: UploadFile = File(None),  # Optional image file
     current_user: DbUser = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    db_course = DbCourse(
-        id=str(uuid.uuid4()),
-        **course.model_dump(),
-        instructor_id=current_user.id
-    )
+    try:
+        # Parse the JSON data
+        data = json.loads(course_data)
+        course_id = str(uuid.uuid4())
 
-    if image:
-        # In a real application, you would save the file and store its path
-        db_course.image = f"courses/{uuid.uuid4()}.jpg"
+        image_url = ""
+        if image:
+            try:
+                image_url = upload_image_to_cloudinary(
+                    file=image,
+                    folder="lms/courses",
+                    public_id=f"course_{course_id}_cover"
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Image upload failed: {str(e)}"
+                )
 
-    db.add(db_course)
-    db.commit()
-    db.refresh(db_course)
-    return db_course
+        db_course = DbCourse(
+            id=course_id,
+            title=data["title"],
+            category=data["category"],
+            level=data["level"],
+            primary_language=data["primaryLanguage"],
+            subtitle=data["subtitle"],
+            description=data["description"],
+            welcome_message=data["welcomeMessage"],
+            pricing=data["pricing"],
+            image=image_url,
+            objectives=data.get("objectives", []),
+            instructor_id=current_user.id,
+            instructor_name=current_user.name
+        )
+        db.add(db_course)
+        db.commit()
+        db.refresh(db_course)
+
+        # Create curriculum items
+        for item in data.get("curriculum", []):
+            curr_item = DbCurrItem(
+                id=str(uuid.uuid4()),
+                title=item["title"],
+                video_url=item.get("video_url"),
+                public_id=item.get("public_id"),
+                is_free_preview=item.get("is_free_preview", False),
+                course_id=db_course.id
+            )
+            db.add(curr_item)
+
+        db.commit()
+        db.refresh(db_course)
+        return db_course
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 
 @router.get("/my", response_model=List[CourseResponse])
@@ -87,6 +135,10 @@ def delete_course(
 
     db.delete(course)
     db.commit()
+    return {"message": "Course deleted successfully"}
+
+
+# Extra routes for the enrolled courses
 
 
 @router.post("/{course_id}/enroll", status_code=status.HTTP_201_CREATED)
@@ -106,14 +158,16 @@ def enroll_in_course(
     if course in current_user.enrolled_courses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Already enrolled in this course"
+            detail="You are already enrolled in this course"
         )
 
     current_user.enrolled_courses.append(course)
     db.commit()
+    db.refresh(current_user)
+    return {"message": f"You have enrolled in {course.title} successfully"}
 
 
-@router.get("/my-courses", response_model=List[CourseResponse])
+@router.get("/enrolled-courses", response_model=List[CourseResponse])
 def get_enrolled_courses(
     current_user: DbUser = Depends(get_current_user),
     db: Session = Depends(get_db)

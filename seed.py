@@ -4,10 +4,18 @@ from models.user import DbUser
 from models.course import DbCourse
 from models.curr_item import DbCurrItem
 from schemas.base_schema import UserCreate, CourseCreate
+from services.auth import get_password_hash
 import uuid
+from utils.seed_utils import seed_database
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
+
+if __name__ == "__main__":
+    print("Seeding database...")
+    db = next(get_db())
+    seed_database(db)
+    print("Database seeded successfully!")
 
 
 def seed_database():
@@ -277,32 +285,7 @@ def seed_database():
     # Create courses and their curriculum items
     for course_data in courses_data:
         instructor = instructors[course_data["instructor_name"]]
-        course_create = CourseCreate(
-            title=course_data["title"],
-            category=course_data["category"],
-            level=course_data["level"],
-            primary_language=course_data["primary_language"],
-            subtitle=course_data["subtitle"],
-            description=course_data["description"],
-            image=course_data["image"],
-            welcome_message=course_data["welcome_message"],
-            pricing=course_data["pricing"],
-            instructor_name=course_data["instructor_name"]
-        )
-        course = create_course(db, course_create, instructor)
-
-        # Create curriculum items
-        for item_data in course_data["curriculum"]:
-            curr_item = DbCurrItem(
-                id=str(uuid.uuid4()),
-                title=item_data["title"],
-                video_url=item_data["video_url"],
-                public_id=item_data["public_id"],
-                is_free_preview=item_data["is_free_preview"],
-                course_id=course.id
-            )
-            db.add(curr_item)
-        db.commit()
+        course = create_course(db, course_data, instructor)
 
     # Create students and enroll them in courses
     students = [
@@ -331,12 +314,12 @@ def seed_database():
 
 
 def create_user(db: Session, user_create: UserCreate) -> DbUser:
-    """Create a new user using the UserCreate schema"""
+    """Create a new user using the UserCreate schema and proper password hashing"""
     db_user = DbUser(
         id=str(uuid.uuid4()),
         name=user_create.name,
         email=user_create.email,
-        hashed_password=user_create.password,  # In production, this should be hashed
+        hashed_password=get_password_hash(user_create.password),
         bio=user_create.bio,
         avatar=user_create.avatar
     )
@@ -346,20 +329,43 @@ def create_user(db: Session, user_create: UserCreate) -> DbUser:
     return db_user
 
 
-def create_course(db: Session, course_create: CourseCreate, instructor: DbUser) -> DbCourse:
-    """Create a new course using the CourseCreate schema"""
-    db_course = DbCourse(
-        id=str(uuid.uuid4()),
-        **course_create.model_dump(),
-        instructor_id=instructor.id
+def create_course(session: Session, course_data: dict, instructor: DbUser) -> DbCourse:
+    """Create a course with its curriculum items"""
+    # Create the course
+    course = DbCourse(
+        id=course_data['id'],
+        title=course_data['title'],
+        category=course_data['category'],
+        level=course_data['level'],
+        primary_language=course_data['primary_language'],
+        subtitle=course_data['subtitle'],
+        description=course_data['description'],
+        image=course_data['image'],
+        welcome_message=course_data['welcome_message'],
+        pricing=course_data['pricing'],
+        instructor_id=instructor.id,
+        instructor_name=instructor.full_name,
+        objectives=course_data.get('objectives', [])
     )
-    db.add(db_course)
-    db.commit()
-    db.refresh(db_course)
-    return db_course
+    session.add(course)
+    session.commit()
+    session.refresh(course)
 
+    # Create curriculum items
+    for item in course_data['curriculum']:
+        curr_item = DbCurrItem(
+            id=item['id'],
+            title=item['title'],
+            video_url=item.get('video_url'),
+            public_id=item.get('public_id'),
+            is_free_preview=item.get('is_free_preview', False),
+            duration=item.get('duration'),
+            description=item.get('description'),
+            order=item.get('order'),
+            course_id=course.id
+        )
+        session.add(curr_item)
 
-if __name__ == "__main__":
-    print("Seeding database...")
-    seed_database()
-    print("Database seeded successfully!")
+    session.commit()
+    session.refresh(course)
+    return course

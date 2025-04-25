@@ -4,7 +4,7 @@ from db.database import Base
 
 
 class DbCurrItem(Base):
-    __tablename__ = 'curr_items'
+    __tablename__ = 'curriculum_items'
 
     id = Column(String, primary_key=True)
     title = Column(String(255), nullable=False)

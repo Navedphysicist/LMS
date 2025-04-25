@@ -6,9 +6,6 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
 
-    # Authentication
-    JWT_SECRET_KEY: str
-    JWT_ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
     # Cloudinary

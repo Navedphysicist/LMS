@@ -40,6 +40,8 @@ class CourseBase(BaseModel):
     welcome_message: Optional[str] = None
     pricing: float = Field(ge=0)
     instructor_name: str
+    objectives: List[str] = []
+    curriculum: List[CurrItemResponse] = []
 
     class Config:
         from_attributes = True
@@ -72,7 +74,6 @@ class CourseResponse(CourseBase):
     id: str
     revenue: float = 0.0
     instructor: UserBasicInfo
-    curriculum: List[CurrItemResponse] = []
     students: List[UserBasicInfo] = []
 
     class Config:

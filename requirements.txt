@@ -9,3 +9,5 @@ python-dotenv
 email-validator 
 pydantic-settings
 pydantic[email]
+python-jose[cryptography] 
+cloudinary

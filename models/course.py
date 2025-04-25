@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Float, ForeignKey
+from sqlalchemy import Column, String, Text, Float, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from db.database import Base
 from models.enrollments import enrollments
@@ -19,6 +19,7 @@ class DbCourse(Base):
     pricing = Column(Float)
     revenue = Column(Float, default=0.0)
     instructor_name = Column(String(100))
+    objectives = Column(JSON)
 
     # Foreign Keys
     instructor_id = Column(String, ForeignKey('users.id'))
