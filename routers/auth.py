@@ -11,7 +11,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserResponse)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
+def register(user_data: UserCreate, bio: str = None, avatar: str = None, db: Session = Depends(get_db)):
     # Check if user already exists
     existing_user = db.query(DbUser).filter(
         DbUser.email == user_data.email).first()
@@ -22,12 +22,14 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         )
 
     hashed_password = get_password_hash(user_data.password)
-
+ 
     new_user = DbUser(
         id=str(uuid.uuid4()),
         name=user_data.name,
         email=user_data.email,
         hashed_password=hashed_password,
+        bio=bio,
+        avatar=avatar
     )
 
     db.add(new_user)
@@ -51,7 +53,10 @@ def login(
         max_age=30
     )
 
-    return {"message": f"Successfully logged in as {user.email}"}
+    return {"name" : user.name,
+            "email" : user.email,
+            "message": f"Successfully logged in as {user.email}"
+        }
 
 
 @router.post("/logout")

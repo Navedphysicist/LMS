@@ -10,13 +10,13 @@ import uuid
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/my-profile", response_model=UserResponse)
 async def get_user_profile(
     current_user: DbUser = Depends(get_current_user)):
     return current_user
 
 
-@router.put("/me", response_model=UserResponse)
+@router.put("/my-profile", response_model=UserResponse)
 def update_user_profile(
     name: str = Form(...),
     bio: str = Form(None),

@@ -22,6 +22,7 @@ class UserCreate(BaseModel):
     password: str
 
 
+
 class UserBasicInfo(UserBase):
     id: str
 

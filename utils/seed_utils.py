@@ -8,14 +8,14 @@ from data.seed_data import INSTRUCTORS, STUDENTS, COURSES
 import uuid
 
 
-def create_user(db: Session, user_data: dict) -> DbUser:
+def create_user(db: Session, user_data: dict,bio:str = None, avatar:str = None) -> DbUser:
     """Create a new user with hashed password"""
     user_create = UserCreate(
         name=user_data["name"],
         email=user_data["email"],
         password=user_data["password"],
-        bio=user_data["bio"],
-        avatar=user_data["avatar"]
+        bio=bio,
+        avatar=avatar
     )
 
     db_user = DbUser(
@@ -23,8 +23,8 @@ def create_user(db: Session, user_data: dict) -> DbUser:
         name=user_create.name,
         email=user_create.email,
         hashed_password=get_password_hash(user_create.password),
-        bio=user_create.bio,
-        avatar=user_create.avatar
+        bio=bio,
+        avatar=avatar
     )
 
     db.add(db_user)
@@ -59,7 +59,7 @@ def create_course(db: Session, course_data: dict, instructor: DbUser) -> DbCours
     # Create curriculum items
     for item in course_data["curriculum"]:
         curr_item = DbCurrItem(
-            id=item["id"],
+            id=str(uuid.uuid4()),
             title=item["title"],
             video_url=item["video_url"],
             public_id=item["public_id"],
