@@ -16,7 +16,9 @@ class UserBase(BaseModel):
         from_attributes = True
 
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    name:str
+    email: EmailStr
     password: str
 
 

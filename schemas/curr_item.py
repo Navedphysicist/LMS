@@ -20,6 +20,6 @@ class CurrItemCreate(CurrItemBase):
 class CurrItemResponse(CurrItemBase):
     id: str
     course_id: str
-
+    
     class Config:
         from_attributes = True

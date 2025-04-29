@@ -28,8 +28,6 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         name=user_data.name,
         email=user_data.email,
         hashed_password=hashed_password,
-        bio=user_data.bio,
-        avatar=user_data.avatar
     )
 
     db.add(new_user)
