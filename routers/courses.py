@@ -108,7 +108,7 @@ def create_course(
         )
 
 
-@router.get("/my", response_model=List[CourseResponse])
+@router.get("/my-courses", response_model=List[CourseResponse])
 def get_my_courses(
     current_user: DbUser = Depends(get_current_user),
     db: Session = Depends(get_db)
