@@ -26,16 +26,15 @@ def get_courses(
     query = db.query(DbCourse)
 
     if level:
-        query = query.filter(DbCourse.level.lower() == level.lower())
+        query = query.filter(DbCourse.level.ilike(level))
     if price_min is not None:
         query = query.filter(DbCourse.pricing >= price_min)
     if price_max is not None:
         query = query.filter(DbCourse.pricing <= price_max)
     if language:
-        query = query.filter(
-            DbCourse.primary_language.lower() == language.lower())
+        query = query.filter(DbCourse.primary_language.ilike(language))
     if category:
-        query = query.filter(DbCourse.category.lower() == category.lower())
+        query = query.filter(DbCourse.category.ilike(category))
 
     return query.all()
 
