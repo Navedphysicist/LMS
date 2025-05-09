@@ -137,6 +137,21 @@ def delete_course(
     return {"message": "Course deleted successfully"}
 
 
+@router.get("/{course_id}", response_model=CourseResponse)
+def get_course_by_id(
+    course_id: str,
+    db: Session = Depends(get_db)
+):
+    course = db.query(DbCourse).filter(
+        DbCourse.id == course_id).first()
+
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
+    return course
+
 # Extra routes for the enrolled courses
 
 
