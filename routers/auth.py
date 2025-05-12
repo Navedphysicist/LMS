@@ -50,7 +50,7 @@ def login(
     response.set_cookie(
         key="user_id",
         value=str(user.id),
-        max_age=30
+        max_age=60 * 60 * 24 * 7
     )
 
     return {"name" : user.name,
